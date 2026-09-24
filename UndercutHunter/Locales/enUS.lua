@@ -3,7 +3,7 @@ UndercutHunter = UndercutHunter or {}
 local UH = UndercutHunter
 
 UH.L = {
-  TAB = "Bargains",
+  TAB = "Undercut",
   SCAN = "Scan",
   STOP = "Stop",
   BUYOUT = "Buyout",

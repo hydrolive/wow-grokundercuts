@@ -176,6 +176,12 @@ function UH.UI.UpdateOverlay()
     overlay:Show()
     return
   end
+  local watchCount = UH.db and UH.db.watchlist and #UH.db.watchlist or 0
+  if watchCount == 0 and UH.Results:Count() == 0 and not (UH.Scanner and UH.Scanner.running) then
+    overlay:SetText(UH.L.NO_WATCHLIST .. "\n\n" .. UH.L.WATCHLIST_HINT .. "\n\nAt or below 50% of market is the default.")
+    overlay:Show()
+    return
+  end
   overlay:Hide()
 end
 
@@ -1200,6 +1206,8 @@ local function ShowModernPanel(ah)
     "CategoriesList", "ItemBuyFrame", "CommoditiesBuyFrame", "ItemSellFrame",
     "ItemSellList", "CommoditiesSellFrame", "CommoditiesSellList",
     "AuctionsFrame", "WoWTokenFrame",
+    "AuctionatorShoppingFrame", "AuctionatorShoppingTabFrame",
+    "AuctionatorSellingFrame", "AuctionatorCancellingFrame", "AuctionatorConfigFrame",
   }
   for i = 1, #names do
     local frame = ah[names[i]]
@@ -1229,6 +1237,7 @@ function UH.UI.AttachModernFallback(ah)
     button = MakeButton(ah, UH.L.TAB, 90, 22)
   end
   button:SetText(UH.L.TAB)
+  button:SetFrameLevel((ah:GetFrameLevel() or 1) + 40)
   if type(PanelTemplates_TabResize) == "function" then
     pcall(PanelTemplates_TabResize, button, 20, nil, 70)
   end
@@ -1241,7 +1250,18 @@ function UH.UI.AttachModernFallback(ah)
         table.remove(tabs, i)
       end
     end
-    last = tabs[#tabs]
+  end
+  if type(LibStub) == "function" then
+    local okLib, lib = pcall(LibStub, "LibAHTab-1-0")
+    if okLib and type(lib) == "table" and lib.internalState and type(lib.internalState.Tabs) == "table" then
+      last = lib.internalState.Tabs[#lib.internalState.Tabs]
+    end
+  end
+  if not last or last == button then
+    last = _G.AuctionatorTabs_Auctionator or _G.AuctionatorTabs_Cancelling or _G.AuctionatorTabs_Selling or _G.AuctionatorTabs_Shopping
+  end
+  if not last or last == button then
+    last = type(tabs) == "table" and tabs[#tabs] or nil
   end
   button:ClearAllPoints()
   local placed = false
@@ -1257,6 +1277,23 @@ function UH.UI.AttachModernFallback(ah)
     ShowModernPanel(ah)
   end)
   HookBlizzardTabs(ah)
+  local auctionatorTabs = {
+    "AuctionatorTabs_Shopping",
+    "AuctionatorTabs_Selling",
+    "AuctionatorTabs_Cancelling",
+    "AuctionatorTabs_Auctionator",
+  }
+  for i = 1, #auctionatorTabs do
+    local tab = _G[auctionatorTabs[i]]
+    if tab and not tab.undercutHunterHooked and tab.HookScript then
+      tab.undercutHunterHooked = true
+      tab:HookScript("OnClick", function()
+        if UH.UI.panel and UH.attached ~= "lib" then
+          UH.UI.panel:Hide()
+        end
+      end)
+    end
+  end
   if type(hooksecurefunc) == "function" and ah.SetDisplayMode and not UH.UI.hookedDisplay then
     UH.UI.hookedDisplay = true
     hooksecurefunc(ah, "SetDisplayMode", function(_, mode)
@@ -1307,30 +1344,45 @@ function UH.UI.AttachClassicFallback(ah)
   UH.Debug("attached to AuctionFrame")
 end
 
+local function LibAHTab()
+  if type(LibStub) ~= "function" then
+    return nil
+  end
+  local ok, lib = pcall(LibStub, "LibAHTab-1-0")
+  if ok and type(lib) == "table" and type(lib.CreateTab) == "function" then
+    return lib
+  end
+  return nil
+end
+
 function UH.UI.TryAttach()
   if UH.attached then
     return
   end
   local modern = AuctionHouseFrame
   if modern then
-    local lib = nil
-    if type(LibStub) == "function" then
-      local ok, result = pcall(LibStub, "LibAHTab-1-0")
-      if ok and type(result) == "table" and type(result.CreateTab) == "function" then
-        if not result.DoesIDExist or not result:DoesIDExist("UndercutHunterBargains") then
-          lib = result
-        else
-          UH.attached = "lib"
-          return
-        end
-      end
-    end
+    local lib = LibAHTab()
     if lib then
+      if lib.DoesIDExist and lib:DoesIDExist("UndercutHunter") then
+        UH.attached = "lib"
+        return
+      end
+      -- Auctionator creates Shopping, Selling, Cancelling, and its own tab
+      -- through this library. Wait one frame so Undercut is added to their
+      -- right instead of covering Cancelling.
+      local auctionatorReady = lib.internalState and type(lib.internalState.Tabs) == "table" and #lib.internalState.Tabs > 0
+      if not auctionatorReady and not UH.uiAttachWaited then
+        UH.uiAttachWaited = true
+        UH.After(0, function()
+          UH.UI.TryAttach()
+        end)
+        return
+      end
       local panel = UH.UI.CreatePanel(modern, false)
       local ok, err = pcall(function()
-        lib:CreateTab("UndercutHunterBargains", panel, UH.L.TAB, UH.L.TAB)
+        lib:CreateTab("UndercutHunter", panel, UH.L.TAB, "Undercut Hunter")
       end)
-      if ok then
+      if ok or (lib.DoesIDExist and lib:DoesIDExist("UndercutHunter")) then
         UH.attached = "lib"
         UH.Debug("attached via LibAHTab")
         return

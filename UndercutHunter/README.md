@@ -1,6 +1,6 @@
 # Undercut Hunter
 
-Undercut Hunter is a World of Warcraft: Forever addon. It adds a **Bargains** tab to the Auction House and lists other players' auctions that are cheap compared with Auctionator's last scanned market price.
+Undercut Hunter is a World of Warcraft: Forever addon. It adds an **Undercut** tab to the Auction House and lists other players' auctions that are cheap compared with Auctionator's last scanned market price.
 
 Interface: **16001** (Forever beta 1.60.1). This is not a Retail addon and not a Classic Era addon.
 
@@ -34,7 +34,7 @@ This addon does not fork Auctionator and does not read Auctionator's saved datab
 
 1. Enable Undercut Hunter and Auctionator.
 2. Open the Auction House, open the **Auctionator** tab, and run **Full Scan**.
-3. Open the **Bargains** tab.
+3. Open the **Undercut** tab. It sits to the right of Auctionator's tabs. Auctionator's Cancelling tab is a different tool. It cancels your own auctions.
 4. Leave the threshold at **50** (at or below 50% of market).
 5. Shift-click wool, herbs, or cloth into the box, or paste an item ID, and press **Add**.
 6. Press **Scan**.
