@@ -85,6 +85,7 @@ local function ApplyIdentity(row, partial, priced)
   row.listIndex = partial.listIndex
   row.page = partial.page
   row.legacyName = partial.legacyName or row.name
+  row.lockedMarket = partial.marketOverride
   return row
 end
 
@@ -254,7 +255,7 @@ function UH.Results:Reprice()
         kept[#kept + 1] = row
       end
     else
-      local priced = UH.Prices.Evaluate(row.itemID, row.buyoutAmount, row.quantity, row.link)
+      local priced = UH.Prices.Evaluate(row.itemID, row.buyoutAmount, row.quantity, row.link, row.lockedMarket)
       if priced and PassesQuality(row.itemID, row.quality) and not UH.Watchlist.IsIgnored(row.itemID) then
         row.unitListed = priced.unitListed
         row.unitMarket = priced.unitMarket

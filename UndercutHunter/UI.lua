@@ -120,9 +120,10 @@ local function Checkbox(parent, text, key)
     UH.Config.DB()
     UH.db[key] = self:GetChecked() and true or false
     if key == "includePoor" or key == "includeBids" or key == "useVendorFallback" then
-      UH.Results:Reprice()
+      UH.Scanner:Refilter()
+    else
+      UH.UI.Refresh()
     end
-    UH.UI.Refresh()
   end)
   return wrap, box
 end
@@ -759,8 +760,7 @@ local function CommitNumber(box, key, minValue, maxValue, integer)
     UH.UI.slider:SetValue(value)
     UH.UI.syncing = false
   end
-  UH.Results:Reprice()
-  UH.UI.Refresh()
+  UH.Scanner:Refilter()
 end
 
 function UH.UI.CreatePanel(parent, classic)
@@ -825,8 +825,7 @@ function UH.UI.CreatePanel(parent, classic)
     if UH.UI.thresholdBox then
       UH.UI.thresholdBox:SetText(tostring(value))
     end
-    UH.Results:Reprice()
-    UH.UI.Refresh()
+    UH.Scanner:Refilter()
   end)
   local thresholdBox = MakeEdit(panel, 36)
   thresholdBox:SetMaxLetters(3)
@@ -927,7 +926,7 @@ function UH.UI.CreatePanel(parent, classic)
         fn = function()
           UH.db.limitToWatchlist = false
           self:SetText(L.SOURCE_HOUSE)
-          UH.UI.Refresh()
+          UH.Scanner:Refilter()
         end,
       },
       {
@@ -935,7 +934,7 @@ function UH.UI.CreatePanel(parent, classic)
         fn = function()
           UH.db.limitToWatchlist = true
           self:SetText(L.SOURCE_WATCHLIST)
-          UH.UI.Refresh()
+          UH.Scanner:Refilter()
         end,
       },
     })

@@ -39,6 +39,7 @@ end
 function UH.Scanner:Stop(silent)
   local wasRunning = self.running or self.deep ~= nil
   self:Bump()
+  self.applyGen = (self.applyGen or 0) + 1
   self.running = false
   self.queue = {}
   self.job = nil
@@ -1035,6 +1036,7 @@ function UH.Scanner:FilterSlice()
     db.nameFilter = savedFilter
   end
   if deep.rowIndex > #rows then
+    self.cache = { rows = deep.rows, norms = deep.norms }
     deep.rows = nil
     deep.groups = nil
     self.deep = nil
@@ -1046,6 +1048,92 @@ function UH.Scanner:FilterSlice()
     if gen == self.generation then
       self:FilterSlice()
     end
+  end)
+end
+
+function UH.Scanner:Refilter()
+  if self.running then
+    return
+  end
+  self.refilterGen = (self.refilterGen or 0) + 1
+  local gen = self.refilterGen
+  UH.After(0.2, function()
+    if self.refilterGen ~= gen or self.running then
+      return
+    end
+    if self.cache and self.cache.rows then
+      self:ApplyCached()
+    else
+      UH.Results:Reprice()
+      Refresh()
+    end
+  end)
+end
+
+function UH.Scanner:ApplyCached()
+  local cache = self.cache
+  if not cache or not cache.rows or self.running then
+    UH.Results:Reprice()
+    Refresh()
+    return
+  end
+  self.applyGen = (self.applyGen or 0) + 1
+  local gen = self.applyGen
+  UH.Results:Clear()
+  self.applyIndex = 1
+  Status(UH.L.REFILTER)
+  self:ApplySlice(gen)
+end
+
+function UH.Scanner:ApplySlice(gen)
+  local cache = self.cache
+  if gen ~= self.applyGen or self.running or not cache or not cache.rows then
+    return
+  end
+  local db = UH.Config.DB()
+  local rows = cache.rows
+  local last = math.min(#rows, self.applyIndex + 2000)
+  local watch = nil
+  if db.limitToWatchlist then
+    watch = {}
+    local candidates = UH.Watchlist.Candidates()
+    for i = 1, #candidates do
+      watch[candidates[i].itemID] = true
+    end
+  end
+  for i = self.applyIndex, last do
+    local row = rows[i]
+    if not watch or watch[row.itemID] then
+      local typical = cache.norms[row.itemID]
+      if typical and row.buyoutAmount / row.quantity <= typical * (db.thresholdPercent or 50) / 100 then
+        UH.Results:Consider({
+          itemID = row.itemID,
+          name = row.name,
+          icon = row.icon,
+          quality = row.quality,
+          quantity = row.quantity,
+          buyoutAmount = row.buyoutAmount,
+          owner = row.owner,
+          marketOverride = typical,
+          isCommodity = false,
+        })
+      end
+    end
+  end
+  self.applyIndex = last + 1
+  if #UH.Results.rows > (db.maxResults or 200) then
+    local savedFilter = db.nameFilter
+    db.nameFilter = ""
+    UH.Results.rows = UH.Results:GetView()
+    db.nameFilter = savedFilter
+  end
+  if self.applyIndex > #rows then
+    Status(string.format(UH.L.FOUND_DEALS, UH.Results:Count()))
+    Refresh()
+    return
+  end
+  UH.After(0.01, function()
+    self:ApplySlice(gen)
   end)
 end
 

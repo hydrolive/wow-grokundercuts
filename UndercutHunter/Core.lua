@@ -440,7 +440,9 @@ local function SlashCommand(msg)
     if UH.UI and UH.UI.SyncFromDB then
       UH.UI.SyncFromDB()
     end
-    if UH.Results and UH.Results.Reprice then
+    if UH.Scanner and UH.Scanner.Refilter then
+      UH.Scanner:Refilter()
+    elseif UH.Results and UH.Results.Reprice then
       UH.Results:Reprice()
     end
     UH.Print(string.format(UH.L.THRESHOLD_SET, value))

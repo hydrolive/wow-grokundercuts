@@ -162,11 +162,13 @@ function UH.Prices.RegisterUpdates()
   end
   local ok, err = pcall(Auctionator.API.v1.RegisterForDBUpdate, UH.CALLER_ID, function()
     UH.Debug("Auctionator DB update")
-    if UH.Results and UH.Results.Reprice then
+    if UH.Scanner and UH.Scanner.Refilter then
+      UH.Scanner:Refilter()
+    elseif UH.Results and UH.Results.Reprice then
       UH.Results:Reprice()
-    end
-    if UH.UI and UH.UI.Refresh then
-      UH.UI.Refresh()
+      if UH.UI and UH.UI.Refresh then
+        UH.UI.Refresh()
+      end
     end
   end)
   if ok then
