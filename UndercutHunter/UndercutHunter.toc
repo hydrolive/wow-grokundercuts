@@ -1,0 +1,19 @@
+## Interface: 16001
+## Title: Undercut Hunter
+## Notes: Find Forever AH listings far below Auctionator market price, sorted by deepest discount, and buy them out.
+## Author: UndercutHunter
+## Version: 0.1.0-forever
+## Dependencies: Auctionator
+## OptionalDeps: LibStub, LibAHTab-1-0
+## SavedVariables: UndercutHunterDB
+## X-Flavor: Forever
+
+Locales/enUS.lua
+Core.lua
+Config.lua
+Prices.lua
+Watchlist.lua
+Results.lua
+Scanner.lua
+Buyout.lua
+UI.lua
