@@ -151,6 +151,13 @@ function UH.Scanner:Start()
     UH.Buyout:CancelPending(false)
   end
 
+  if not UH.Config.DB().limitToWatchlist
+    and UH.HasFn(C_AuctionHouse, "ReplicateItems")
+    and UH.HasFn(C_AuctionHouse, "GetReplicateItemInfo") then
+    self:StartHouse()
+    return
+  end
+
   local candidates, truncated, rawCount = self:BuildCandidates()
   if #candidates == 0 then
     if rawCount == 0 then
@@ -712,6 +719,31 @@ function UH.Scanner:OnDropped()
   end)
 end
 
+function UH.Scanner:StartHouse()
+  if self.running then
+    Status(UH.L.ALREADY_SCANNING)
+    return
+  end
+  if not UH.AHOpen() then
+    UH.Print(UH.L.AH_CLOSED)
+    return
+  end
+  if not UH.HasFn(C_AuctionHouse, "ReplicateItems") or not UH.HasFn(C_AuctionHouse, "GetReplicateItemInfo") then
+    UH.Print(UH.L.DEEP_UNSUPPORTED)
+    Status(UH.L.DEEP_UNSUPPORTED)
+    return
+  end
+  if not UH.Prices.IsReady() then
+    UH.Print(UH.L.AUCTIONATOR_MISSING)
+    Status(UH.L.STATUS_MISSING)
+    return
+  end
+  if UH.Buyout then
+    UH.Buyout:CancelPending(false)
+  end
+  self:StartDeepConfirmed()
+end
+
 function UH.Scanner:StartDeep()
   if self.running then
     Status(UH.L.ALREADY_SCANNING)
@@ -751,7 +783,7 @@ function UH.Scanner:StartDeepConfirmed()
   self.waiting = nil
   UH.Results:Clear()
   UH.SetQueryLock(true)
-  self.deep = { gen = gen, stage = "request", index = 0, total = 0 }
+  self.deep = { gen = gen, stage = "request", index = 0, total = 0, prices = {} }
   Status(string.format(UH.L.DEEP_PROGRESS, 0, 0))
   local ok, err = pcall(C_AuctionHouse.ReplicateItems)
   if not ok then
@@ -789,13 +821,16 @@ function UH.Scanner:ReadDeepSlice()
   local total = deep.total or 0
   local db = UH.Config.DB()
   local watch = nil
-  if db.scanSource ~= "pricedCandidates" then
+  if db.limitToWatchlist then
     watch = {}
     local candidates = UH.Watchlist.Candidates()
     for i = 1, #candidates do
       watch[candidates[i].itemID] = candidates[i]
     end
   end
+  local prices = deep.prices or {}
+  deep.prices = prices
+  local threshold = db.thresholdPercent or 50
   local last = math.min(total, deep.index + 250)
   for i = deep.index, last - 1 do
     local ok, values = pcall(function()
@@ -810,7 +845,18 @@ function UH.Scanner:ReadDeepSlice()
       local owner = values[14]
       local itemID = UH.AsNumber(values[17])
       local me = type(UnitName) == "function" and UnitName("player") or nil
-      if itemID and (not watch or watch[itemID]) and (not owner or not me or owner ~= me) then
+      local priced = itemID and prices[itemID]
+      if itemID and priced == nil then
+        priced = UH.Prices.GetAuctionatorByID(itemID) or false
+        prices[itemID] = priced
+      end
+      local cheap = false
+      if priced and count > 0 and buyout > 0 then
+        cheap = (buyout / count) / priced * 100 <= threshold
+      elseif priced and db.includeBids and count > 0 then
+        cheap = true
+      end
+      if cheap and itemID and (not watch or watch[itemID]) and (not owner or not me or owner ~= me) then
         local known = watch and watch[itemID]
         UH.Results:Consider({
           itemID = itemID,
@@ -833,8 +879,20 @@ function UH.Scanner:ReadDeepSlice()
     db.nameFilter = savedFilter
   end
   Status(string.format(UH.L.DEEP_PROGRESS, math.min(deep.index, total), total))
+  if deep.index % 1000 < 250 then
+    Refresh()
+  end
   if deep.index >= total then
     self.deep = nil
+    if total == 0 then
+      self.running = false
+      self.waiting = nil
+      UH.SetQueryLock(false)
+      Status(UH.L.HOUSE_EMPTY)
+      UH.Print(UH.L.HOUSE_EMPTY)
+      Refresh()
+      return
+    end
     Refresh()
     self:Finish()
     return

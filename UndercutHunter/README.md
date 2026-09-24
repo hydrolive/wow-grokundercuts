@@ -35,10 +35,9 @@ This addon does not fork Auctionator and does not read Auctionator's saved datab
 1. Enable Undercut Hunter and Auctionator.
 2. Open the Auction House, open the **Auctionator** tab, and run **Full Scan**.
 3. Open the **Undercut** tab. It sits to the right of Auctionator's tabs. Auctionator's Cancelling tab is a different tool. It cancels your own auctions.
-4. Leave the threshold at **50** (at or below 50% of market).
-5. Shift-click wool, herbs, or cloth into the box, or paste an item ID, and press **Add**.
-6. Press **Scan**.
-7. Click a row. Press **Buyout** and confirm.
+4. Leave the threshold at **50** (at or below 50% of Auctionator's price).
+5. Press **Scan**. It reads the whole auction house. A watchlist is optional.
+6. Click a row. Press **Buyout** and confirm.
 
 Example that the scan is built for: Auctionator's market for wool is 10 silver, and someone listed wool at 1 silver buyout. That row sorts near the top (90% off). Select it and press Buyout. The confirm popup shows the item, quantity, listed price, market price, percent off, gold saved, and total cost.
 
@@ -46,7 +45,7 @@ Forever's auction house is per faction. Alliance cities share one house, Horde c
 
 ## What a scan does
 
-The default scan is the watchlist, not a dump of the whole house.
+The default scan reads the whole auction house and keeps listings at or below your percent of Auctionator's price. Choose "Watchlist only" to limit it.
 
 On the modern Auction House API the scan sends at most 100 item keys per `SearchForItemKeys` call, waits when `IsThrottledMessageSystemReady` says the client is throttled, then runs `SendSearchQuery` for items that still look cheap. Listings are kept when the unit buyout is at or below your percent of Auctionator's unit price. Bid-only rows (buyout of 0) are skipped unless **Show bid-only** is on, and those rows cannot be bought out.
 

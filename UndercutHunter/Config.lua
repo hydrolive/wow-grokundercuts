@@ -14,6 +14,7 @@ UH.DEFAULTS = {
   sortMode = "percentThenGold",
   maxResults = 200,
   scanSource = "watchlist",
+  limitToWatchlist = false,
   autoScanOnTabOpen = false,
   confirmBuyout = true,
   doubleClickBuyout = true,
@@ -56,6 +57,9 @@ function UH.Config.Apply()
   end
   if db.scanSource ~= "watchlist" and db.scanSource ~= "pricedCandidates" then
     db.scanSource = "watchlist"
+  end
+  if db.limitToWatchlist == nil then
+    db.limitToWatchlist = false
   end
 
   db.thresholdPercent = UH.AsNumber(db.thresholdPercent) or 50

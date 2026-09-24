@@ -176,9 +176,12 @@ function UH.UI.UpdateOverlay()
     overlay:Show()
     return
   end
-  local watchCount = UH.db and UH.db.watchlist and #UH.db.watchlist or 0
-  if watchCount == 0 and UH.Results:Count() == 0 and not (UH.Scanner and UH.Scanner.running) then
-    overlay:SetText(UH.L.NO_WATCHLIST .. "\n\n" .. UH.L.WATCHLIST_HINT .. "\n\nAt or below 50% of market is the default.")
+  if UH.Scanner and UH.Scanner.running then
+    overlay:Hide()
+    return
+  end
+  if UH.Results:Count() == 0 then
+    overlay:SetText(UH.L.SCAN_HINT)
     overlay:Show()
     return
   end
@@ -256,10 +259,10 @@ function UH.UI.SortLabel()
 end
 
 function UH.UI.SourceLabel()
-  if UH.Config.DB().scanSource == "pricedCandidates" then
-    return UH.L.SOURCE_PASTED
+  if UH.Config.DB().limitToWatchlist then
+    return UH.L.SOURCE_WATCHLIST
   end
-  return UH.L.SOURCE_WATCHLIST
+  return UH.L.SOURCE_HOUSE
 end
 
 function UH.UI.ApplyColumns(row)
@@ -915,22 +918,24 @@ function UH.UI.CreatePanel(parent, classic)
   checks.autoScanOnTabOpen:GetParent():ClearAllPoints()
   checks.autoScanOnTabOpen:GetParent():SetPoint("LEFT", checks.doubleClickBuyout:GetParent(), "RIGHT", 8, 0)
 
-  local source = MakeButton(panel, L.SOURCE_WATCHLIST, 150, 20)
+  local source = MakeButton(panel, L.SOURCE_HOUSE, 170, 20)
   source:SetPoint("TOPLEFT", row2, "BOTTOMLEFT", 2, -6)
   source:SetScript("OnClick", function(self)
     UH.UI.ToggleChoice(self, {
       {
-        text = L.SOURCE_WATCHLIST,
+        text = L.SOURCE_HOUSE,
         fn = function()
-          UH.db.scanSource = "watchlist"
-          self:SetText(L.SOURCE_WATCHLIST)
+          UH.db.limitToWatchlist = false
+          self:SetText(L.SOURCE_HOUSE)
+          UH.UI.Refresh()
         end,
       },
       {
-        text = L.SOURCE_PASTED,
+        text = L.SOURCE_WATCHLIST,
         fn = function()
-          UH.db.scanSource = "pricedCandidates"
-          self:SetText(L.SOURCE_PASTED)
+          UH.db.limitToWatchlist = true
+          self:SetText(L.SOURCE_WATCHLIST)
+          UH.UI.Refresh()
         end,
       },
     })
@@ -978,7 +983,7 @@ function UH.UI.CreatePanel(parent, classic)
   local deep = MakeButton(panel, L.DEEP, 90, 20)
   deep:SetPoint("LEFT", filterBox, "RIGHT", 6, 0)
   deep:SetScript("OnClick", function()
-    UH.Scanner:StartDeep()
+    UH.Scanner:StartHouse()
   end)
 
   local watchTitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
