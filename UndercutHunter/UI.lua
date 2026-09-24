@@ -1217,37 +1217,45 @@ function UH.UI.AttachModernFallback(ah)
     return
   end
   UH.UI.CreatePanel(ah, false)
-  local ok, button = pcall(CreateFrame, "Button", "UndercutHunterTabButton", ah, "AuctionHouseFrameDisplayModeTabTemplate")
-  if not ok or not button then
-    button = MakeButton(ah, UH.L.TAB, 90, 22)
-  else
-    button:SetText(UH.L.TAB)
-    if type(PanelTemplates_TabResize) == "function" then
-      pcall(PanelTemplates_TabResize, button, 20, nil, 70)
-    end
+  -- The display-mode template inserts the new button into ah.Tabs during
+  -- creation. A second attempt in the same open inserts it again, so the
+  -- last tab is this button and SetPoint anchors it to itself.
+  local button = _G.UndercutHunterTabButton
+  if not button then
+    pcall(CreateFrame, "Button", "UndercutHunterTabButton", ah, "AuctionHouseFrameDisplayModeTabTemplate")
+    button = _G.UndercutHunterTabButton
   end
-  -- AuctionHouseFrameDisplayModeTabTemplate appends this button to ah.Tabs
-  -- before we can place it, so the last entry is the button itself.
+  if not button then
+    button = MakeButton(ah, UH.L.TAB, 90, 22)
+  end
+  button:SetText(UH.L.TAB)
+  if type(PanelTemplates_TabResize) == "function" then
+    pcall(PanelTemplates_TabResize, button, 20, nil, 70)
+  end
+  UH.UI.tabButton = button
   local last = nil
   local tabs = ah.Tabs
   if type(tabs) == "table" then
     for i = #tabs, 1, -1 do
-      if tabs[i] and tabs[i] ~= button then
-        last = tabs[i]
-        break
+      if tabs[i] == button then
+        table.remove(tabs, i)
       end
     end
+    last = tabs[#tabs]
   end
   button:ClearAllPoints()
-  if last then
-    button:SetPoint("TOPLEFT", last, "TOPRIGHT", 4, 0)
-  else
+  local placed = false
+  if last and last ~= button then
+    placed = pcall(function()
+      button:SetPoint("TOPLEFT", last, "TOPRIGHT", 4, 0)
+    end)
+  end
+  if not placed then
     button:SetPoint("BOTTOMLEFT", ah, "BOTTOMLEFT", 60, 2)
   end
   button:SetScript("OnClick", function()
     ShowModernPanel(ah)
   end)
-  UH.UI.tabButton = button
   HookBlizzardTabs(ah)
   if type(hooksecurefunc) == "function" and ah.SetDisplayMode and not UH.UI.hookedDisplay then
     UH.UI.hookedDisplay = true
