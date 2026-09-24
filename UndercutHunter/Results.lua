@@ -171,7 +171,7 @@ function UH.Results:Consider(partial)
     return true
   end
 
-  local priced = UH.Prices.Evaluate(itemID, buyout, quantity, partial.link)
+  local priced = UH.Prices.Evaluate(itemID, buyout, quantity, partial.link, partial.marketOverride)
   if not priced then
     return false
   end

@@ -83,7 +83,7 @@ end
 
 -- unitListed / unitMarket * 100 <= threshold keeps the listing.
 -- Returns nil when the listing is not a bargain under the current settings.
-function UH.Prices.Evaluate(itemID, buyoutCopper, quantity, itemLink)
+function UH.Prices.Evaluate(itemID, buyoutCopper, quantity, itemLink, marketOverride)
   local db = UH.Config.DB()
   quantity = UH.AsNumber(quantity)
   buyoutCopper = UH.AsNumber(buyoutCopper)
@@ -97,7 +97,10 @@ function UH.Prices.Evaluate(itemID, buyoutCopper, quantity, itemLink)
     return nil
   end
 
-  local market = UH.Prices.GetMarket(itemID, itemLink)
+  local market = UH.AsNumber(marketOverride)
+  if not market or market <= 0 then
+    market = UH.Prices.GetMarket(itemID, itemLink)
+  end
   if not market or market <= 0 then
     return nil
   end
