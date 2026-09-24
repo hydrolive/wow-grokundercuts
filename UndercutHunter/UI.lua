@@ -1173,7 +1173,9 @@ local function HookBlizzardTabs(ah)
   end
   for i = 1, #tabs do
     local tab = tabs[i]
-    if tab and not tab.undercutHunterHooked and tab.HookScript then
+    -- The display-mode tab template inserts our button into AuctionHouseFrame.Tabs.
+    -- Hooking that button would hide the Bargains panel in the same click that shows it.
+    if tab and tab ~= UH.UI.tabButton and not tab.undercutHunterHooked and tab.HookScript then
       tab.undercutHunterHooked = true
       tab:HookScript("OnClick", function()
         if UH.UI.panel and UH.attached ~= "lib" then
@@ -1224,8 +1226,18 @@ function UH.UI.AttachModernFallback(ah)
       pcall(PanelTemplates_TabResize, button, 20, nil, 70)
     end
   end
+  -- AuctionHouseFrameDisplayModeTabTemplate appends this button to ah.Tabs
+  -- before we can place it, so the last entry is the button itself.
+  local last = nil
   local tabs = ah.Tabs
-  local last = type(tabs) == "table" and tabs[#tabs] or nil
+  if type(tabs) == "table" then
+    for i = #tabs, 1, -1 do
+      if tabs[i] and tabs[i] ~= button then
+        last = tabs[i]
+        break
+      end
+    end
+  end
   button:ClearAllPoints()
   if last then
     button:SetPoint("TOPLEFT", last, "TOPRIGHT", 4, 0)
