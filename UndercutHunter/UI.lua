@@ -76,20 +76,26 @@ local function MakeSlider(parent)
 end
 
 local function MakeBar(parent)
-  local ok, bar = pcall(CreateFrame, "Slider", nil, parent, "UIPanelScrollBarTemplate")
-  if not ok or not bar then
-    bar = CreateFrame("Slider", nil, parent)
-    bar:SetOrientation("VERTICAL")
-    bar:SetWidth(12)
-    bar:SetThumbTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
-  end
+  -- Forever's UIPanelScrollBarTemplate runs Blizzard's secure OnValueChanged,
+  -- which calls GetParent():SetVerticalScroll. These bars sit on a normal
+  -- frame, so that call is nil and opening the AH errors. A plain slider
+  -- keeps the wheel and drag behavior without that script.
+  local bar = CreateFrame("Slider", nil, parent)
+  bar:SetOrientation("VERTICAL")
   bar:SetWidth(16)
+  bar:SetThumbTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
+  local track = bar:CreateTexture(nil, "BACKGROUND")
+  Solid(track, 0, 0, 0, 0.55)
+  track:SetWidth(6)
+  track:SetPoint("TOP", bar, "TOP", 0, 0)
+  track:SetPoint("BOTTOM", bar, "BOTTOM", 0, 0)
   bar:SetMinMaxValues(0, 0)
   bar:SetValueStep(1)
-  bar:SetValue(0)
   if bar.SetObeyStepOnDrag then
     bar:SetObeyStepOnDrag(true)
   end
+  bar:SetScript("OnValueChanged", nil)
+  bar:SetValue(0)
   return bar
 end
 
